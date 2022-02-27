@@ -6,6 +6,7 @@ from psycopg2 import Error
 from datetime import datetime, timezone
 import json
 
+
 def connectToDataBase():
     try:
         # Подключение к существующей базе данных
@@ -105,7 +106,6 @@ try:
     sql = ""
 
     if out == '':
-
         cursor.execute("SELECT id From event_type where name = \'configNotChanged.ioServerXML\' ")
         event_type = cursor.fetchone()[0]
 
@@ -115,7 +115,8 @@ try:
         currentDate = datetime.now()
         data = json.dumps({'result': 'No changes found'})
         sql = "INSERT INTO event (parent, created, type, source, enduser, handledelay, handled, data)" \
-              " VALUES (null, timestamp \'{}\', {}, {}, false , 0, null , \'{}\')".format(currentDate, event_type,event_source, data)
+              " VALUES (null, timestamp \'{}\', {}, {}, false , 0, null , \'{}\')".format(currentDate, event_type,
+                                                                                          event_source, data)
         cursor.execute(sql)
         connection.commit()
         cursor.close();
@@ -147,8 +148,9 @@ try:
                     newValue = line.split(',')[3][:-1]
 
                 if name in elm[0].attrib:
-                    changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + ", Атрибут: " + name \
-                                     + ", Новое значение: " + newValue + ", Старое значение: " + elm[0].attrib[name] +"\n"
+                    changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + ", Атрибут: " + \
+                                     name + ", Новое значение: " + newValue + ", Старое значение: " \
+                                     + elm[0].attrib[name] + "\n"
                     # print("Действие: " + actionValue + ", Путь в XML: " + captionPath + ", Атрибут: " + name
                     #       + ", Новое значение: " + newValue + ", Старое значение: " + elm[0].attrib[name])
                     # print(line + " Original value: " + elm[0].attrib[name])
@@ -157,7 +159,7 @@ try:
                     changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath
                     # print("Действие: " + actionValue + ", Путь в XML: " + captionPath)
                     # print(line)
-                changesPath +=line
+                changesPath += line
             else:
                 changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath
                 # print("Действие: " + actionValue + ", Путь в XML: " + captionPath)
@@ -167,8 +169,8 @@ try:
         currentDate = datetime.now()
         data = json.dumps([{'result': changesResult}, {'path': changesPath}])
         sql = "INSERT INTO event (parent, created, type, source, enduser, handledelay, handled, data)" \
-              " VALUES (null, timestamp \'{}\', {}, {}, false , 0, null , \'{}\')".format(currentDate, event_type,
-                                                                                          event_source, data)
+              " VALUES (null, timestamp \'{}\', {}, {}, true , 0, null , \'{}\')".format(currentDate, event_type,
+                                                                                         event_source, data)
         cursor.execute(sql)
         connection.commit()
 
@@ -202,7 +204,8 @@ except (Exception, Error) as error:
     data = json.dumps([{'result': errorStr}])
     # print(data)
     sql = "INSERT INTO event (parent, created, type, source, enduser, handledelay, handled, data)" \
-          " VALUES (null, timestamp \'{}\', {}, {}, false , 0, null , \'{}\')".format(currentDate, event_type, event_source, data)
+          " VALUES (null, timestamp \'{}\', {}, {}, false , 0, null , \'{}\')".format(currentDate, event_type,
+                                                                                      event_source, data)
     # print(sql)
     cursorException.execute(sql)
     conn.commit()
