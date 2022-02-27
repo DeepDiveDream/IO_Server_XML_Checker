@@ -10,29 +10,30 @@ def connectToDataBase():
         # Подключение к существующей базе данных
         connection = psycopg2.connect(user="latyn",
                                       # пароль, который указали при установке PostgreSQL
-                                      password="nytal",
+                                      password="nytal+",
                                       host="10.3.3.67",
                                       database="elsec")
 
         # Курсор для выполнения операций с базой данных
-        cursor = connection.cursor()
-        return cursor
-        # Распечатать сведения о PostgreSQL
-        print("Информация о сервере PostgreSQL")
-        print(connection.get_dsn_parameters(), "\n")
-        # Выполнение SQL-запроса
-        cursor.execute("SELECT version();")
-        # Получить результат
-        record = cursor.fetchone()
-        print("Вы подключены к - ", record, "\n")
+        # cursor = connection.cursor()
+        return connection
+        # # Распечатать сведения о PostgreSQL
+        # print("Информация о сервере PostgreSQL")
+        # print(connection.get_dsn_parameters(), "\n")
+        # # Выполнение SQL-запроса
+        # cursor.execute("SELECT version();")
+        # # Получить результат
+        # record = cursor.fetchone()
+        # print("Вы подключены к - ", record, "\n")
 
     except (Exception, Error) as error:
         print("Ошибка при работе с PostgreSQL", error)
-    finally:
-        if connection:
-            cursor.close()
-            connection.close()
-            print("Соединение с PostgreSQL закрыто")
+
+    # finally:
+    #     if connection:
+    #         cursor.close()
+    #         connection.close()
+    #         print("Соединение с PostgreSQL закрыто")
 
 
 def get_name_of_original_attr(inputString):
@@ -92,19 +93,12 @@ def compare_xmls(observed, expected, XMLFormatMode=0):
 
 
 try:
-    # Подключение к существующей базе данных
-    connection = psycopg2.connect(user="latyn",
-                                  # пароль, который указали при установке PostgreSQL
-                                  password="nytal",
-                                  host="10.3.3.67",
-                                  database="elsec")
 
-    # Курсор для выполнения операций с базой данных
+    connection = connectToDataBase()
+    if not connection:
+        sys.exit(1)
+
     cursor = connection.cursor()
-
-    # Распечатать сведения о PostgreSQL
-    print("Информация о сервере PostgreSQL")
-    print(connection.get_dsn_parameters(), "\n")
     # Выполнение SQL-запроса
     cursor.execute("SELECT version();")
     # Получить результат
