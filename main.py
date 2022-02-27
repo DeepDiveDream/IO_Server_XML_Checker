@@ -3,14 +3,15 @@ import xml.etree.ElementTree as ET
 import sys
 import psycopg2
 from psycopg2 import Error
-
+from datetime import datetime, timezone
+import json
 
 def connectToDataBase():
     try:
         # Подключение к существующей базе данных
         connection = psycopg2.connect(user="latyn",
                                       # пароль, который указали при установке PostgreSQL
-                                      password="nytal+",
+                                      password="nytal",
                                       host="10.3.3.67",
                                       database="elsec")
 
@@ -107,8 +108,17 @@ try:
 
     mode = 0
     out = compare_xmls("Hakas_kalina.xml", "Hakas_kalina1.xml", mode)
+    sql = ""
 
     if out == '':
+        currenDate = datetime.now(timezone.utc)
+        data = json.dumps({'result' : 'No changes found'})
+        sql = "INSERT INTO event (parent, created, type, source, enduser, handledelay, handled, data)" \
+              " VALUES (null, timestamp \'{}\', 202, 16, false , 0, null , \'{}\')".format(currenDate, data)
+        cursor.execute(sql)
+        connection.commit()
+        cursor.close();
+        connection.close;
         sys.exit(0)
 
     if mode == 0:
@@ -144,9 +154,19 @@ try:
                 print(i.strip())
 
 except (Exception, Error) as error:
-    print("Ошибка при работе: ", error)
+    currenDate = datetime.now(timezone.utc)
+    data = json.dumps({'error': error})
+    sql = "INSERT INTO event (parent, created, type, source, enduser, handledelay, handled, data)" \
+          " VALUES (null, timestamp \'{}\', 303, 16, false , 0, null , \'{}\')".format(currenDate, data)
+    cursor.execute(sql)
+    connection.commit()
+    cursor.close();
+    connection.close;
+    sys.exit(0)
+
     sys.exit(1)
 finally:
+    print("++++++++")
     if connection:
         cursor.close()
         connection.close()
