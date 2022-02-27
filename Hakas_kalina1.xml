@@ -156,7 +156,7 @@
       <property name="name" caption="Протокол" type="text" editing="0" visible="0" key="0" default="1"/>
       <property name="caption" caption="Наименование" type="text" editing="1" visible="1" key="0" default="1"/>
       <property name="module" caption="Модуль" type="text" editing="0" visible="1" key="0" default="1"/>
-      <property name="driver+" caption="Драйвер" type="text" editing="0" visible="1" key="0" default="1">
+      <property name="driver" caption="Драйвер" type="text" editing="0" visible="1" key="0" default="1">
         <enum item="LoopBack" caption="Не используется"/>
       </property>
       <property name="redundancy" caption="Резервирование" type="text" editing="0" visible="0" key="0" default="1"/>
@@ -14690,7 +14690,7 @@
           <source number="11997" caption="В 2Т 35 кВ неиспр. модуля управления" no="1006"/>
           <source number="11998" caption="В 2Т 35 кВ неиспр. элементов ШУ" no="1007"/>
           <source number="11999" caption="В 2Т 35 кВ предупр. элементов ШУ" no="1008"/>
-          <source number="12000" caption="В 2Т 35 кВ РЗА введена" no="1009"/>
+          <source number="12000" caption="В 2Т33 35 кВ РЗА введена" no="1009"/>
           <source number="12001" caption="В 2Т 35 кВ положение двери ШУ" no="1018"/>
         </f_source>
       </f_source>
