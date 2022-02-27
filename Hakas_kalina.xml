@@ -156,7 +156,7 @@
       <property name="name" caption="Протокол" type="text" editing="0" visible="0" key="0" default="1"/>
       <property name="caption" caption="Наименование" type="text" editing="1" visible="1" key="0" default="1"/>
       <property name="module" caption="Модуль" type="text" editing="0" visible="1" key="0" default="1"/>
-      <property name="driver1" caption="Драйвер" type="text" editing="0" visible="1" key="0" default="1">
+      <property name="driver" caption="Драйвер" type="text" editing="0" visible="1" key="0" default="1">
         <enum item="LoopBack" caption="Не используется"/>
       </property>
       <property name="redundancy" caption="Резервирование" type="text" editing="0" visible="0" key="0" default="1"/>

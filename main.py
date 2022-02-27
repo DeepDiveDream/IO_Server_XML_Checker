@@ -55,7 +55,6 @@ def get_path_to_original_attr(inputString):
     path_to_atrribute += tmp[start:]
     return path_to_atrribute
 
-
 def get_caption_path_to_attr(inputString):
     lines = inputString.split('/')
     tmp_path = ""
@@ -96,12 +95,14 @@ if out == '':
 root = ET.parse('Hakas_kalina.xml')
 for line in out.splitlines():
     path = get_path_to_original_attr(line)
-    print(path)
-    print(get_caption_path_to_attr(path))
+    captionPath = get_caption_path_to_attr(path)
+    actionValue = line.split[','][0][1:]
+
     if "update-attribute" in line or "delete-attribute" in line:
         elm = root.findall(path)
         name = get_name_of_original_attr(line)
         if name in elm[0].attrib:
+            print("Действие: " + actionValue + " путь: " +captionPath + "атрибут: " + name  +" Original value: " + elm[0].attrib[name])
             print(line + " Original value: " + elm[0].attrib[name])
         else:
             print(line)
