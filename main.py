@@ -99,22 +99,23 @@ try:
     if not connection:
         sys.exit(1)
 
-    cursor = connection.cursor()
-    # Выполнение SQL-запроса
-    cursor.execute("SELECT version();")
-    # Получить результат
-    record = cursor.fetchone()
-    print("Вы подключены к - ", record, "\n")
-
     mode = 0
+    cursor = connection.cursor()
     out = compare_xmls("Hakas_kalina.xml", "Hakas_kalina1.xml", mode)
     sql = ""
 
     if out == '':
-        currenDate = datetime.now(timezone.utc)
-        data = json.dumps({'result' : 'No changes found'})
+
+        cursor.execute("SELECT id From event_type where name = \'configNotChanged.ioServerXML\' ")
+        event_type = cursor.fetchone()[0]
+
+        cursor.execute("SELECT id From event_source where caption = \'Хакасэнерго\' ")
+        event_source = cursor.fetchone()[0]
+
+        currentDate = datetime.now()
+        data = json.dumps({'result': 'No changes found'})
         sql = "INSERT INTO event (parent, created, type, source, enduser, handledelay, handled, data)" \
-              " VALUES (null, timestamp \'{}\', 202, 16, false , 0, null , \'{}\')".format(currenDate, data)
+              " VALUES (null, timestamp \'{}\', {}, {}, false , 0, null , \'{}\')".format(currentDate, event_type,event_source, data)
         cursor.execute(sql)
         connection.commit()
         cursor.close();
@@ -123,6 +124,15 @@ try:
 
     if mode == 0:
         root = ET.parse('Hakas_kalina.xml')
+        changesResult = ""
+        changesPath = ""
+
+        cursor.execute("SELECT id From event_type where name = \'configChanged.ioServerXML\' ")
+        event_type = cursor.fetchone()[0]
+
+        cursor.execute("SELECT id From event_source where caption = \'Хакасэнерго\' ")
+        event_source = cursor.fetchone()[0]
+
         for line in out.splitlines():
             path = get_path_to_original_attr(line)
             captionPath = get_caption_path_to_attr(path)
@@ -137,15 +147,33 @@ try:
                     newValue = line.split(',')[3][:-1]
 
                 if name in elm[0].attrib:
-                    print("Действие: " + actionValue + ", Путь в XML: " + captionPath + ", Атрибут: " + name
-                          + ", Новое значение: " + newValue + ", Старое значение: " + elm[0].attrib[name])
-                    print(line + " Original value: " + elm[0].attrib[name])
+                    changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + ", Атрибут: " + name \
+                                     + ", Новое значение: " + newValue + ", Старое значение: " + elm[0].attrib[name] +"\n"
+                    # print("Действие: " + actionValue + ", Путь в XML: " + captionPath + ", Атрибут: " + name
+                    #       + ", Новое значение: " + newValue + ", Старое значение: " + elm[0].attrib[name])
+                    # print(line + " Original value: " + elm[0].attrib[name])
+
                 else:
-                    print("Действие: " + actionValue + ", Путь в XML: " + captionPath)
-                    print(line)
+                    changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath
+                    # print("Действие: " + actionValue + ", Путь в XML: " + captionPath)
+                    # print(line)
+                changesPath +=line
             else:
-                print("Действие: " + actionValue + ", Путь в XML: " + captionPath)
-                print(line)
+                changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath
+                # print("Действие: " + actionValue + ", Путь в XML: " + captionPath)
+                # print(line)
+                changesPath += line
+
+        currentDate = datetime.now()
+        data = json.dumps([{'result': changesResult}, {'path': changesPath}])
+        sql = "INSERT INTO event (parent, created, type, source, enduser, handledelay, handled, data)" \
+              " VALUES (null, timestamp \'{}\', {}, {}, false , 0, null , \'{}\')".format(currentDate, event_type,
+                                                                                          event_source, data)
+        cursor.execute(sql)
+        connection.commit()
+
+
+
     else:
         import re
 
@@ -154,19 +182,36 @@ try:
                 print(i.strip())
 
 except (Exception, Error) as error:
-    currenDate = datetime.now(timezone.utc)
-    data = json.dumps({'error': error})
-    sql = "INSERT INTO event (parent, created, type, source, enduser, handledelay, handled, data)" \
-          " VALUES (null, timestamp \'{}\', 303, 16, false , 0, null , \'{}\')".format(currenDate, data)
-    cursor.execute(sql)
-    connection.commit()
-    cursor.close();
-    connection.close;
-    sys.exit(0)
+    conn = connectToDataBase()
+    cursorException = conn.cursor()
+    currentDate = datetime.now()
+    errorStr = error.args[0]
+    # print(errorStr)
+    start = errorStr.find('\n')
+    errorStr = errorStr[:start]
+    errorStr = errorStr.replace("\"", "")
+    errorStr = errorStr.replace("\'", "")
+    # print(errorStr)
 
+    cursorException.execute("SELECT id From event_type where name = \'error.ioServerXML\' ")
+    event_type = cursorException.fetchone()[0]
+
+    cursorException.execute("SELECT id From event_source where caption = \'Хакасэнерго\' ")
+    event_source = cursorException.fetchone()[0]
+
+    data = json.dumps([{'result': errorStr}])
+    # print(data)
+    sql = "INSERT INTO event (parent, created, type, source, enduser, handledelay, handled, data)" \
+          " VALUES (null, timestamp \'{}\', {}, {}, false , 0, null , \'{}\')".format(currentDate, event_type, event_source, data)
+    # print(sql)
+    cursorException.execute(sql)
+    conn.commit()
+    cursorException.close();
+    conn.close;
+    # print(error)
     sys.exit(1)
 finally:
-    print("++++++++")
+    print("Finally")
     if connection:
         cursor.close()
         connection.close()
