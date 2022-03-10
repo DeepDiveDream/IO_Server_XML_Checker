@@ -155,8 +155,8 @@
     <properties format="%s, %s (%s)" rdx="line(index=number,name=name,type=module,driver=driver,redLine=priority,direction=direction.number,srvaddr=srvaddr,srvport=srvport,login=login,password=password,tuwait=tuwait,syncManual=syncManual,testTagId=testTagId,testTime=testTime,timeSync=timeSync,timeShiftS=timeShiftS,timeShiftW=timeShiftW,startDelay=startDelay,t0=t0,t14=t14,connectionOscillationRate=connectionOscillationRate,connectionOscillationCount=connectionOscillationCount)" title="number,caption,name">
       <property name="name" caption="Протокол" type="text" editing="0" visible="0" key="0" default="1"/>
       <property name="caption" caption="Наименование" type="text" editing="1" visible="1" key="0" default="1"/>
-      <property name="module" caption="Модуль" editing="0" visible="1" key="0" default="1"/>
-      <property name="driver1" caption="Драйвер" type="text" editing="0" visible="1" key="0" default="1">
+      <property name="module" caption="Модуль" type="text" editing="0" visible="1" key="0" default="1"/>
+      <property name="driver" caption="Драйвер" type="text" editing="0" visible="1" key="0" default="1">
         <enum item="LoopBack" caption="Не используется"/>
       </property>
       <property name="redundancy" caption="Резервирование" type="text" editing="0" visible="0" key="0" default="1"/>
@@ -165,7 +165,7 @@
       </property>
       <property name="srvaddr" caption="IP-адрес" type="text" editing="1" visible="1" key="0" default="1"/>
       <property name="srvport" caption="Порт" type="int" editing="1" visible="1" key="0" default="1"/>
-      <property name="login" caption="Логин1" type="text" editing="1" visible="1" key="0" default="1"/>
+      <property name="login" caption="Логин" type="text" editing="1" visible="1" key="0" default="1"/>
       <property name="password" caption="Пароль" type="text" editing="1" visible="1" key="0"/>
       <property name="tuwait" caption="Таймаут подтверждения ТУ (ms)" type="int" editing="1" visible="1" key="0" default="1"/>
       <property name="syncManual" caption="Синхронизация ручного ввода" type="bool" editing="1" visible="1" key="0" default="1"/>

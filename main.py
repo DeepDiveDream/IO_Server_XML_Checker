@@ -102,7 +102,12 @@ try:
 
     mode = 0
     cursor = connection.cursor()
+
+    # cursor.execute("SELECT * From event_source_params('ioServerXML')")
+    # e2vent_type = cursor.fetchone()
+
     out = compare_xmls("Hakas_kalina.xml", "Hakas_kalina1.xml", mode)
+    # out = compare_xmls("ekra.icd", "ekra1.icd", mode)
     sql = ""
 
     if out == '':
@@ -113,11 +118,14 @@ try:
         event_source = cursor.fetchone()[0]
 
         currentDate = datetime.now()
-        data = json.dumps({'result': 'No changes found'})
-        sql = "INSERT INTO event (parent, created, type, source, enduser, handledelay, handled, data)" \
-              " VALUES (null, timestamp \'{}\', {}, {}, false , 0, null , \'{}\')".format(currentDate, event_type,
-                                                                                          event_source, data)
-        cursor.execute(sql)
+        data = json.dumps({'data': '','display': 'Изменения не найдены'})
+
+        # sql = "INSERT INTO event (created, type, source, enduser, handledelay, handled, data)" \
+        #       " VALUES (null, {}, {}, false , 0, null , \'{}\')".format(event_type, event_source, data)
+        # cursor.execute(sql)
+
+        cursor.callproc('event_new', [event_type, event_source, 'false', data])
+
         connection.commit()
         cursor.close();
         connection.close;
@@ -125,6 +133,7 @@ try:
 
     if mode == 0:
         root = ET.parse('Hakas_kalina.xml')
+        # root = ET.parse('ekra.icd')
         changesResult = ""
         changesPath = ""
 
@@ -167,11 +176,15 @@ try:
                 changesPath += line
 
         currentDate = datetime.now()
-        data = json.dumps([{'result': changesResult}, {'path': changesPath}])
-        sql = "INSERT INTO event (parent, created, type, source, enduser, handledelay, handled, data)" \
-              " VALUES (null, timestamp \'{}\', {}, {}, true , 0, null , \'{}\')".format(currentDate, event_type,
-                                                                                         event_source, data)
-        cursor.execute(sql)
+        data = json.dumps({'data': changesPath, 'display': changesResult})
+
+        # sql = "INSERT INTO event (created, type, source, enduser, handledelay, handled, data)" \
+        #       " VALUES (timestamp \'{}\', {}, {}, true , 0, null , \'{}\')".format(currentDate, event_type,
+        #                                                                                  event_source, data)
+        # cursor.execute(sql)
+
+        cursor.callproc('event_new', [event_type, event_source, 'true', data])
+
         connection.commit()
 
 
@@ -201,21 +214,23 @@ except (Exception, Error) as error:
     cursorException.execute("SELECT id From event_source where caption = \'Хакасэнерго\' ")
     event_source = cursorException.fetchone()[0]
 
-    data = json.dumps([{'result': errorStr}])
+    data = json.dumps({'data': errorStr})
     # print(data)
-    sql = "INSERT INTO event (parent, created, type, source, enduser, handledelay, handled, data)" \
-          " VALUES (null, timestamp \'{}\', {}, {}, false , 0, null , \'{}\')".format(currentDate, event_type,
-                                                                                      event_source, data)
-    # print(sql)
-    cursorException.execute(sql)
+    # sql = "INSERT INTO event (created, type, source, enduser, handledelay, handled, data)" \
+    #       " VALUES (timestamp \'{}\', {}, {}, false , 0, null , \'{}\')".format(currentDate, event_type,
+    #                                                                                   event_source, data)
+    # # print(sql)
+    # cursorException.execute(sql)
+
+    cursorException.callproc('event_new', [event_type, event_source, 'false', data])
+
+
     conn.commit()
     cursorException.close();
     conn.close;
     # print(error)
     sys.exit(1)
 finally:
-    print("Finally")
     if connection:
         cursor.close()
         connection.close()
-        sys.exit(0)
