@@ -288,9 +288,9 @@
     <line number="13" name="Mdx" caption="10.22.129.45" module="ModExt.ModMdx" driver="LoopBack" redundancy="mdx" srvaddr="10.22.129.45" srvport="1312" login="RDXSERVER.EXE" tuwait="10000" testTime="2" t0="3000" t14="50" version="2.0"/>
     <remoteunit number="11" caption="Группа тэгов" protocol="Mdx">
       <f_source number="1" caption="Принимаемые значения"/>
-      <f_pass number="1" caption="Передаваемые значения">
+      <f_pass number="1" caption="Передаваемые значения99">
         <pass number="50" tagid="1" tagtype="2" wheelOut="1" links="l1"/>
-        <pass number="52" tagid="2" tagtype="2" wheelOut="1" procMul="1" procClear="1" procRate="5" procCount="10" links="l13"/>
+        <pass number="7777" tagid="2" tagtype="2" wheelOut="1" procMul="1" procClear="1" procRate="5" procCount="10" links="l13"/>
       </f_pass>
       <f_controlsource number="1" caption="Принимаемые команды"/>
       <f_controlpass number="1" caption="Передаваемые команды"/>

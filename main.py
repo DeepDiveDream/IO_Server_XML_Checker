@@ -3,75 +3,70 @@ import xml.etree.ElementTree as ET
 import sys
 import psycopg2
 from psycopg2 import Error
-from datetime import datetime, timezone
 import json
 
 
-def connectToDataBase():
+def connect_to_data_base():
     try:
         # Подключение к существующей базе данных
-        connection = psycopg2.connect(user="latyn",
-                                      # пароль, который указали при установке PostgreSQL
-                                      password="nytal",
-                                      host="10.3.3.67",
-                                      database="elsec")
+        postgre_connection = psycopg2.connect(user="latyn",
+                                              # пароль, который указали при установке PostgreSQL
+                                              password="nytal",
+                                              host="10.3.3.67",
+                                              database="elsec")
+        return postgre_connection
 
-        # Курсор для выполнения операций с базой данных
-        # cursor = connection.cursor()
-        return connection
-        # # Распечатать сведения о PostgreSQL
-        # print("Информация о сервере PostgreSQL")
-        # print(connection.get_dsn_parameters(), "\n")
-        # # Выполнение SQL-запроса
-        # cursor.execute("SELECT version();")
-        # # Получить результат
-        # record = cursor.fetchone()
-        # print("Вы подключены к - ", record, "\n")
-
-    except (Exception, Error) as error:
-        print("Ошибка при работе с PostgreSQL", error)
-
-    # finally:
-    #     if connection:
-    #         cursor.close()
-    #         connection.close()
-    #         print("Соединение с PostgreSQL закрыто")
+    except (Exception, Error) as connection_error:
+        print("Ошибка при работе с PostgreSQL", connection_error)
 
 
-def get_name_of_original_attr(inputString):
-    lines = inputString.split(',')
-    name = lines[2].lstrip()
-    if name[-1] == "]":
-        name = name[:-1]
+def get_name_of_deleted_tag(input_string):
+    lines = input_string.split(',')
+    attr_name = lines[1].lstrip()
+    if attr_name[-1] == "]":
+        attr_name = attr_name[:-1]
 
-    return name
+    return attr_name
 
 
-def get_path_to_original_attr(inputString):
-    path_to_atrribute = "."
-    lines = inputString.split(',')
+def get_name_of_original_attr(input_string):
+    lines = input_string.split(',')
+    attr_name = lines[2].lstrip()
+    if attr_name[-1] == "]":
+        attr_name = attr_name[:-1]
+
+    return attr_name
+
+
+def get_path_to_original_attr(input_string):
+    path_to_attribute = "."
+    lines = input_string.split(',')
     tmp = lines[1].lstrip()
 
     if tmp.count('/') == 1:
-        return path_to_atrribute
+        return path_to_attribute
 
-    start = tmp.find('/', tmp.find('/') + 1)
-    path_to_atrribute += tmp[start:]
+    pos = tmp.find('/', tmp.find('/') + 1)
+    path_to_attribute += tmp[pos:]
 
-    if path_to_atrribute[-2] == "]":
-        path_to_atrribute = path_to_atrribute[:-1]
+    if path_to_attribute[-2] == "]":
+        path_to_attribute = path_to_attribute[:-1]
 
-    return path_to_atrribute
+    return path_to_attribute
 
 
-def get_caption_path_to_attr(inputString):
-    tmp_lines = inputString.split('/')
+def get_caption_path_to_attr(input_string, is_original):
+    tmp_lines = input_string.split('/')
     tmp_path = ""
     caption_path = ""
 
     for tmp_line in tmp_lines:
         tmp_path += tmp_line
-        elm1 = root.findall(tmp_path)
+
+        if is_original:
+            elm1 = root_origin.findall(tmp_path)
+        else:
+            elm1 = root_new.findall(tmp_path)
 
         if len(elm1) > 0:
             caption_path += elm1[0].tag
@@ -84,8 +79,8 @@ def get_caption_path_to_attr(inputString):
     return caption_path
 
 
-def compare_xmls(observed, expected, XMLFormatMode=0):
-    if XMLFormatMode == 0:
+def compare_xmlns(observed, expected, xml_format_mode=0):
+    if xml_format_mode == 0:
         formatter = formatting.DiffFormatter(normalize=formatting.WS_BOTH)
     else:
         formatter = formatting.XMLFormatter(normalize=formatting.WS_BOTH)
@@ -94,143 +89,146 @@ def compare_xmls(observed, expected, XMLFormatMode=0):
     return diff
 
 
-try:
+if __name__ == "__main__":
 
-    connection = connectToDataBase()
+    mode = 0
+    connection = connect_to_data_base()
+
     if not connection:
         sys.exit(1)
 
-    mode = 0
     cursor = connection.cursor()
+    try:
 
-    # cursor.execute("SELECT * From event_source_params('ioServerXML')")
-    # e2vent_type = cursor.fetchone()
-
-    out = compare_xmls("Hakas_kalina.xml", "Hakas_kalina1.xml", mode)
-    # out = compare_xmls("ekra.icd", "ekra1.icd", mode)
-    sql = ""
-
-    if out == '':
-        cursor.execute("SELECT id From event_type where name = \'configNotChanged.ioServerXML\' ")
-        event_type = cursor.fetchone()[0]
-
-        cursor.execute("SELECT id From event_source where caption = \'Хакасэнерго\' ")
+        cursor.execute("SELECT * From event_source_params('ioServerXML')")
         event_source = cursor.fetchone()[0]
 
-        currentDate = datetime.now()
-        data = json.dumps({'data': '','display': 'Изменения не найдены'})
+        out = compare_xmlns("Hakas_kalina.xml", "Hakas_kalina1.xml", mode)
+        # out = compare_xmls("ekra.icd", "ekra1.icd", mode)
+        sql = ""
 
-        # sql = "INSERT INTO event (created, type, source, enduser, handledelay, handled, data)" \
-        #       " VALUES (null, {}, {}, false , 0, null , \'{}\')".format(event_type, event_source, data)
-        # cursor.execute(sql)
+        if out == '':
+            cursor.execute("SELECT id From event_type where name = \'configNotChanged.ioServerXML\' ")
+            event_type = cursor.fetchone()[0]
 
-        cursor.callproc('event_new', [event_type, event_source, 'false', data])
+            data = json.dumps({'data': '', 'display': 'Изменения не найдены'})
 
-        connection.commit()
-        cursor.close();
-        connection.close;
-        sys.exit(0)
+            cursor.callproc('event_new', [event_type, event_source, 'false', data])
 
-    if mode == 0:
-        root = ET.parse('Hakas_kalina.xml')
-        # root = ET.parse('ekra.icd')
-        changesResult = ""
-        changesPath = ""
+            connection.commit()
+            cursor.close()
+            print("No changes")
+            sys.exit(0)
 
-        cursor.execute("SELECT id From event_type where name = \'configChanged.ioServerXML\' ")
-        event_type = cursor.fetchone()[0]
+        if mode == 0:
+            root_origin = ET.parse('Hakas_kalina.xml')
+            root_new = ET.parse('Hakas_kalina1.xml')
+            # root = ET.parse('ekra.icd')
+            changesResult = ""
+            changesPath = ""
 
-        cursor.execute("SELECT id From event_source where caption = \'Хакасэнерго\' ")
-        event_source = cursor.fetchone()[0]
+            cursor.execute("SELECT id From event_type where name = \'configChanged.ioServerXML\' ")
+            event_type = cursor.fetchone()[0]
 
-        for line in out.splitlines():
-            path = get_path_to_original_attr(line)
-            captionPath = get_caption_path_to_attr(path)
-            tmp = line.split(',')
-            actionValue = tmp[0][1:]
+            for line in out.splitlines():
+                path = get_path_to_original_attr(line)
+                captionPath = get_caption_path_to_attr(path, True)
+                splitResult = line.split(',')
+                actionValue = splitResult[0][1:]
 
-            if "update-attribute" in line or "delete-attribute" in line:
-                elm = root.findall(path)
-                name = get_name_of_original_attr(line)
-                newValue = ""
-                if len(tmp) > 3:
-                    newValue = line.split(',')[3][:-1]
+                if "update-attribute" in line or "delete-attribute" in line:
 
-                if name in elm[0].attrib:
+                    elm = root_origin.findall(path)
+
+                    name = get_name_of_original_attr(line)
+                    newValue = ""
+                    if len(splitResult) > 3:
+                        newValue = line.split(',')[3][:-1]
+
+                    if name in elm[0].attrib:
+                        changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + ", Атрибут: " + \
+                                         name + ", Новое значение:" + newValue + ', Старое значение: "' \
+                                         + elm[0].attrib[name] + '"\n'
+                    else:
+                        changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + "\n"
+                    changesPath += line + "\n"
+
+                elif "insert-attribute" in line:
+
+                    captionPath = get_caption_path_to_attr(path, False)
+                    name = get_name_of_original_attr(line)
+                    newValue = ""
+                    if len(splitResult) > 3:
+                        newValue = line.split(',')[3][:-1]
+
                     changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + ", Атрибут: " + \
-                                     name + ", Новое значение: " + newValue + ", Старое значение: " \
-                                     + elm[0].attrib[name] + "\n"
-                    # print("Действие: " + actionValue + ", Путь в XML: " + captionPath + ", Атрибут: " + name
-                    #       + ", Новое значение: " + newValue + ", Старое значение: " + elm[0].attrib[name])
-                    # print(line + " Original value: " + elm[0].attrib[name])
+                                     name + ", значение:" + newValue + '"\n'
+
+                    changesPath += line + "\n"
+
+                elif "insert" in line and "attribute" not in line:
+                    changesResult += "Действие: " + actionValue + ", Путь в XML: " \
+                                     + captionPath + ", Добавлен тэг: " + splitResult[2].strip() + "\n"
+                    changesPath += line + "\n"
+
+                elif "rename" in line and "attribute" not in line:
+                    changesResult += "Действие: " + actionValue + ", Путь в XML: " \
+                                     + captionPath + ", Новое имя тега: [" + splitResult[2].strip() + "\n"
+                    changesPath += line + "\n"
+                elif "delete" in line and "attribute" not in line:
+
+                    deleted_tag_path = splitResult[1].strip()
+                    deleted_tag_pos = deleted_tag_path.rfind('/')
+                    deleted_tag_name = deleted_tag_path[deleted_tag_pos + 1:]
+
+                    deleted_tag_pos = deleted_tag_name.find('[')
+                    deleted_tag_name = deleted_tag_name[:deleted_tag_pos]
+
+                    changesResult += "Действие: " + actionValue + ", Путь в XML: " \
+                                     + captionPath + ", Удаленный тег: " + deleted_tag_name + "\n"
+                    changesPath += line + "\n"
 
                 else:
-                    changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath
-                    # print("Действие: " + actionValue + ", Путь в XML: " + captionPath)
-                    # print(line)
-                changesPath += line
-            else:
-                changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath
-                # print("Действие: " + actionValue + ", Путь в XML: " + captionPath)
-                # print(line)
-                changesPath += line
+                    changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + "\n"
+                    changesPath += line + "\n"
 
-        currentDate = datetime.now()
-        data = json.dumps({'data': changesPath, 'display': changesResult})
+            print(changesResult)
+            print(changesPath)
 
-        # sql = "INSERT INTO event (created, type, source, enduser, handledelay, handled, data)" \
-        #       " VALUES (timestamp \'{}\', {}, {}, true , 0, null , \'{}\')".format(currentDate, event_type,
-        #                                                                                  event_source, data)
-        # cursor.execute(sql)
+            data = json.dumps({'data': changesPath, 'display': changesResult})
+            cursor.callproc('event_new', [event_type, event_source, 'true', data])
 
-        cursor.callproc('event_new', [event_type, event_source, 'true', data])
+            connection.commit()
+        else:
+            import re
 
-        connection.commit()
+            for i in out.splitlines():
+                if re.search(r'\bdiff:\w+', i):
+                    print(i)
 
+    except (Exception, Error) as error:
+        conn = connect_to_data_base()
+        cursorException = conn.cursor()
+        errorStr = error.args[0]
+        start = errorStr.find('\n')
+        errorStr = errorStr[:start]
+        errorStr = errorStr.replace("\"", "")
+        errorStr = errorStr.replace("\'", "")
 
+        cursorException.execute("SELECT id From event_type where name = \'error.ioServerXML\'")
+        event_type = cursorException.fetchone()[0]
 
-    else:
-        import re
+        cursorException.execute("SELECT * From event_source_params('ioServerXML')")
+        event_source = cursorException.fetchone()[0]
 
-        for i in out.splitlines():
-            if re.search(r'\bdiff:\w+', i):
-                print(i.strip())
+        data = json.dumps({'data': errorStr})
+        cursorException.callproc('event_new', [event_type, event_source, 'false', data])
 
-except (Exception, Error) as error:
-    conn = connectToDataBase()
-    cursorException = conn.cursor()
-    currentDate = datetime.now()
-    errorStr = error.args[0]
-    # print(errorStr)
-    start = errorStr.find('\n')
-    errorStr = errorStr[:start]
-    errorStr = errorStr.replace("\"", "")
-    errorStr = errorStr.replace("\'", "")
-    # print(errorStr)
-
-    cursorException.execute("SELECT id From event_type where name = \'error.ioServerXML\' ")
-    event_type = cursorException.fetchone()[0]
-
-    cursorException.execute("SELECT id From event_source where caption = \'Хакасэнерго\' ")
-    event_source = cursorException.fetchone()[0]
-
-    data = json.dumps({'data': errorStr})
-    # print(data)
-    # sql = "INSERT INTO event (created, type, source, enduser, handledelay, handled, data)" \
-    #       " VALUES (timestamp \'{}\', {}, {}, false , 0, null , \'{}\')".format(currentDate, event_type,
-    #                                                                                   event_source, data)
-    # # print(sql)
-    # cursorException.execute(sql)
-
-    cursorException.callproc('event_new', [event_type, event_source, 'false', data])
-
-
-    conn.commit()
-    cursorException.close();
-    conn.close;
-    # print(error)
-    sys.exit(1)
-finally:
-    if connection:
-        cursor.close()
-        connection.close()
+        conn.commit()
+        cursorException.close()
+        print(error)
+        sys.exit(1)
+    finally:
+        if connection:
+            cursor.close()
+            connection.close()
