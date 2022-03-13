@@ -100,7 +100,7 @@ if __name__ == "__main__":
     cursor = connection.cursor()
     try:
 
-        cursor.execute("SELECT * From event_source_params('ioServerXML')")
+        cursor.execute("SELECT * FROM event_source_params('ioServerXML')")
         event_source = cursor.fetchone()[0]
 
         out = compare_xmlns("Hakas_kalina.xml", "Hakas_kalina1.xml", mode)
@@ -111,7 +111,7 @@ if __name__ == "__main__":
             cursor.execute("SELECT id From event_type where name = \'configNotChanged.ioServerXML\' ")
             event_type = cursor.fetchone()[0]
 
-            data = json.dumps({'data': '', 'display': 'Изменения не найдены'})
+            data = json.dumps({'data': '[Изменения не найдены]', 'display':{ }})
 
             cursor.callproc('event_new', [event_type, event_source, 'false', data])
 
@@ -136,6 +136,8 @@ if __name__ == "__main__":
                 splitResult = line.split(',')
                 actionValue = splitResult[0][1:]
 
+                changesPath += line + "\n"
+
                 if "update-attribute" in line or "delete-attribute" in line:
 
                     elm = root_origin.findall(path)
@@ -148,10 +150,9 @@ if __name__ == "__main__":
                     if name in elm[0].attrib:
                         changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + ", Атрибут: " + \
                                          name + ", Новое значение:" + newValue + ', Старое значение: "' \
-                                         + elm[0].attrib[name] + '"\n'
+                                         + elm[0].attrib[name] + '"\n<br>'
                     else:
-                        changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + "\n"
-                    changesPath += line + "\n"
+                        changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + "\n<br>"
 
                 elif "insert-attribute" in line:
 
@@ -162,19 +163,16 @@ if __name__ == "__main__":
                         newValue = line.split(',')[3][:-1]
 
                     changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + ", Атрибут: " + \
-                                     name + ", значение:" + newValue + '"\n'
-
-                    changesPath += line + "\n"
+                                     name + ", значение:" + newValue + '"\n<br>'
 
                 elif "insert" in line and "attribute" not in line:
                     changesResult += "Действие: " + actionValue + ", Путь в XML: " \
-                                     + captionPath + ", Добавлен тэг: " + splitResult[2].strip() + "\n"
-                    changesPath += line + "\n"
+                                     + captionPath + ", Добавлен тэг: " + splitResult[2].strip() + "\n<br>"
 
                 elif "rename" in line and "attribute" not in line:
                     changesResult += "Действие: " + actionValue + ", Путь в XML: " \
-                                     + captionPath + ", Новое имя тега: [" + splitResult[2].strip() + "\n"
-                    changesPath += line + "\n"
+                                     + captionPath + ", Новое имя тега: [" + splitResult[2].strip() + "\n<br>"
+
                 elif "delete" in line and "attribute" not in line:
 
                     deleted_tag_path = splitResult[1].strip()
@@ -185,17 +183,15 @@ if __name__ == "__main__":
                     deleted_tag_name = deleted_tag_name[:deleted_tag_pos]
 
                     changesResult += "Действие: " + actionValue + ", Путь в XML: " \
-                                     + captionPath + ", Удаленный тег: " + deleted_tag_name + "\n"
-                    changesPath += line + "\n"
+                                     + captionPath + ", Удаленный тег: " + deleted_tag_name + "\n<br>"
 
                 else:
-                    changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + "\n"
-                    changesPath += line + "\n"
+                    changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + "\n<br>"
 
             print(changesResult)
             print(changesPath)
 
-            data = json.dumps({'data': changesPath, 'display': changesResult})
+            data = json.dumps({'data': changesPath, 'display':{ changesResult}})
             cursor.callproc('event_new', [event_type, event_source, 'true', data])
 
             connection.commit()
