@@ -191,7 +191,14 @@ if __name__ == "__main__":
             print(changesResult)
             print(changesPath)
 
-            data = json.dumps({'data': changesPath, 'display':{ changesResult}})
+            json_data = {
+                "data": [changesPath],
+                "display": {
+                 "Изменения":  changesResult
+                }
+            }
+
+            data = json.dumps(json_data)
             cursor.callproc('event_new', [event_type, event_source, 'true', data])
 
             connection.commit()
