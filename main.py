@@ -69,9 +69,16 @@ def get_caption_path_to_attr(input_string, is_original):
             elm1 = root_new.findall(tmp_path)
 
         if len(elm1) > 0:
-            caption_path += elm1[0].tag
+            # caption_path += elm1[0].tag
+
+            if elm1[0].tag == "configuration":
+                continue
+
+            if elm1[0].tag == "direction":
+                caption_path += "Направление -> "
+
             if 'caption' in elm1[0].attrib:
-                caption_path += "[" + elm1[0].attrib["caption"] + "]/"
+                caption_path += "" + elm1[0].attrib["caption"] + "/"
             else:
                 caption_path += "/"
             tmp_path += "/"
@@ -111,7 +118,14 @@ if __name__ == "__main__":
             cursor.execute("SELECT id From event_type where name = \'configNotChanged.ioServerXML\' ")
             event_type = cursor.fetchone()[0]
 
-            data = json.dumps({'data': '[Изменения не найдены]', 'display':{ }})
+            json_data = {
+                "data": 'Изменения не найдены',
+                "display": {
+                    "Изменения": ''
+                }
+            }
+
+            data = json.dumps(json_data)
 
             cursor.callproc('event_new', [event_type, event_source, 'false', data])
 
@@ -123,7 +137,6 @@ if __name__ == "__main__":
         if mode == 0:
             root_origin = ET.parse('Hakas_kalina.xml')
             root_new = ET.parse('Hakas_kalina1.xml')
-            # root = ET.parse('ekra.icd')
             changesResult = ""
             changesPath = ""
 
@@ -147,12 +160,17 @@ if __name__ == "__main__":
                     if len(splitResult) > 3:
                         newValue = line.split(',')[3][:-1]
 
-                    if name in elm[0].attrib:
-                        changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + ", Атрибут: " + \
-                                         name + ", Новое значение:" + newValue + ', Старое значение: "' \
-                                         + elm[0].attrib[name] + '"\n<br>'
+                    if actionValue == "update-attribute":
+                        actionValue = "Обнаружено изменение значения свойства!"
                     else:
-                        changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + "\n<br>"
+                        actionValue = "Обнаружено удаление свойства!"
+
+                    if name in elm[0].attrib:
+                        changesResult += actionValue + "\n\r   Место изменения: " + captionPath + \
+                                         "\n\r   Свойство: " + name +  \
+                                         ', Старое значение: "' + elm[0].attrib[name] + '"\n\r'
+                    else:
+                        changesResult += actionValue + "\n\r    Место изменения: " + captionPath + "\n\r"
 
                 elif "insert-attribute" in line:
 
@@ -162,18 +180,26 @@ if __name__ == "__main__":
                     if len(splitResult) > 3:
                         newValue = line.split(',')[3][:-1]
 
-                    changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + ", Атрибут: " + \
-                                     name + ", значение:" + newValue + '"\n<br>'
+                    actionValue = "Обнаружено добавление нового свойства!"
+
+                    changesResult += actionValue + "\n\r    Место изменения: " + captionPath + \
+                                     "\n\r    Свойство: " + name + ", Новое значение:" + newValue + "\n\r"
 
                 elif "insert" in line and "attribute" not in line:
-                    changesResult += "Действие: " + actionValue + ", Путь в XML: " \
-                                     + captionPath + ", Добавлен тэг: " + splitResult[2].strip() + "\n<br>"
+
+                    actionValue = "Обнаружено изменение структуры XML!"
+
+                    changesResult += actionValue + ", Путь в XML: " + captionPath + ", Добавлен тэг: " \
+                                     + splitResult[2].strip() + "\n\r"
 
                 elif "rename" in line and "attribute" not in line:
-                    changesResult += "Действие: " + actionValue + ", Путь в XML: " \
-                                     + captionPath + ", Новое имя тега: [" + splitResult[2].strip() + "\n<br>"
+                    actionValue = "Обнаружено изменение структуры XML!"
+                    changesResult += actionValue + ", Путь в XML: " + \
+                                      captionPath + ", Новое имя тега: [" + splitResult[2].strip() + "\n\r"
 
                 elif "delete" in line and "attribute" not in line:
+
+                    actionValue = "Обнаружено изменение структуры XML!"
 
                     deleted_tag_path = splitResult[1].strip()
                     deleted_tag_pos = deleted_tag_path.rfind('/')
@@ -182,11 +208,11 @@ if __name__ == "__main__":
                     deleted_tag_pos = deleted_tag_name.find('[')
                     deleted_tag_name = deleted_tag_name[:deleted_tag_pos]
 
-                    changesResult += "Действие: " + actionValue + ", Путь в XML: " \
-                                     + captionPath + ", Удаленный тег: " + deleted_tag_name + "\n<br>"
+                    changesResult += actionValue + ", Путь в XML: " + captionPath + ", Удаленный тег: " + deleted_tag_name + "\n\r"
 
                 else:
-                    changesResult += "Действие: " + actionValue + ", Путь в XML: " + captionPath + "\n<br>"
+                    actionValue = "Обнаружено изменение структуры XML!"
+                    changesResult += actionValue + ", Путь в XML: " + captionPath + "\n\r"
 
             print(changesResult)
             print(changesPath)
@@ -194,14 +220,14 @@ if __name__ == "__main__":
             json_data = {
                 "data": [changesPath],
                 "display": {
-                 "Изменения":  changesResult
+                    "Изменения": changesResult
                 }
             }
 
             data = json.dumps(json_data)
             cursor.callproc('event_new', [event_type, event_source, 'true', data])
 
-            connection.commit()
+            # connection.commit()
         else:
             import re
 

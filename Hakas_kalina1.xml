@@ -14668,11 +14668,11 @@
   </direction>
   <!--Направление-->
   <direction number="70" caption="ПС 35кВ Черное озеро 3" tmain="6000" tstate="3000" path="#58" weight="1">
-    <line number="79" name="Iec104" caption="Iec104" module="Iec104" driver="Tcp" redundancy="iec" IPaddress="10.119.130.50" port="2404" timeStampGi="2" transmittingK="12" receivingW="8" maxFrameSize="228" t0="3000" t1="15000" t2="10000" t3="20000" t4="60000" t10="100" t11="5000" t12="100" t14="50" timeStampCyclic="2" version="2.0"/>
+    <line number="79" name="Iec104" caption="Iec104" module="Iec104"  driver="Tcp" redundancy="iec" IPaddress="10.119.130.50" port="2404" timeStampGi="2" transmittingK="12" receivingW="8" maxFrameSize="228" t0="3000" t1="15000" t2="10000" t3="20000" t4="60000" t10="100" t11="5000" t12="100" t14="50" timeStampCyclic="2" version="2.0"/>
     <remoteunit number="130" caption="Устройство" asduAddressLength="2" NoLength="3" cotLength="2" asduAddress="1" modeGI="1" repeat="1" protocol="Iec104">
       <f_source number="219" caption="Принимаемые значения">
         <f_source number="220" caption="ТИ">
-          <source number="11971" caption="Ia В 2Т 35кВ" no="3001"/>
+
           <source number="11972" caption="Ib В 2Т 35кВ" no="3002"/>
           <source number="11973" caption="Ic В 2Т 35кВ" no="3003"/>
           <source number="11974" caption="Ua В 2Т 35кВ" no="3010"/>
@@ -14685,7 +14685,7 @@
         </f_source>
         <f_source number="221" caption="ТС">
           <source number="11994" caption="В 2Т 35 кВ положение выключателя" no="1001"/>
-          <source number="11995" caption="В 2Т 35 кВ ДУ разрешено" no="1002"/>
+          <source number="1199a5" caption="В 2Т 35 кВ ДУ разрешено" no="1002"/>
           <source number="11996" caption="В 2Т 35 кВ Пуск РЗА" no="1005"/>
           <source number="11997" caption="В 2Т 35 кВ неиспр. модуля управления" no="1006"/>
           <source number="11998" caption="В 2Т 35 кВ неиспр. элементов ШУ" no="1007"/>
@@ -14695,6 +14695,7 @@
         </f_source>
       </f_source>
       <f_pass number="171" caption="Передаваемые значения"/>
+      <f_controlsource number="118" caption="Принимаемые команды"/>
       <f_controlpass number="118" caption="Передаваемые команды"/>
     </remoteunit>
   </direction>
