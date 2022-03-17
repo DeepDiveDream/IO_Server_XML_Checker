@@ -167,7 +167,7 @@ if __name__ == "__main__":
 
                     if name in elm[0].attrib:
                         changesResult += actionValue + "\n\r   Место изменения: " + captionPath + \
-                                         "\n\r   Свойство: " + name +  \
+                                         "\n\r   Свойство: " + name + ', Новое значение: ' + newValue + \
                                          ', Старое значение: "' + elm[0].attrib[name] + '"\n\r'
                     else:
                         changesResult += actionValue + "\n\r    Место изменения: " + captionPath + "\n\r"
@@ -227,7 +227,7 @@ if __name__ == "__main__":
             data = json.dumps(json_data)
             cursor.callproc('event_new', [event_type, event_source, 'true', data])
 
-            # connection.commit()
+            connection.commit()
         else:
             import re
 
