@@ -161,16 +161,16 @@ if __name__ == "__main__":
                         newValue = line.split(',')[3][:-1]
 
                     if actionValue == "update-attribute":
-                        actionValue = "Обнаружено изменение значения свойства!"
+                        actionValue = "<br>Обнаружено изменение значения свойства!"
                     else:
-                        actionValue = "Обнаружено удаление свойства!"
+                        actionValue = "<br>Обнаружено удаление свойства!"
 
                     if name in elm[0].attrib:
-                        changesResult += actionValue + "\n\r   Место изменения: " + captionPath + \
-                                         "\n\r   Свойство: " + name + ', Новое значение: ' + newValue + \
-                                         ', Старое значение: "' + elm[0].attrib[name] + '"\n\r'
+                        changesResult += actionValue + "<br> &nbsp &nbsp &nbsp Место изменения: &nbsp " + captionPath + \
+                                         "<br> &nbsp &nbsp &nbsp Свойство: &nbsp " + name + ', &nbsp Новое значение: &nbsp' + newValue + \
+                                         ',&nbsp Старое значение: "' + elm[0].attrib[name] + '"<br>'
                     else:
-                        changesResult += actionValue + "\n\r    Место изменения: " + captionPath + "\n\r"
+                        changesResult += actionValue + "<br>&nbsp &nbsp &nbsp Место изменения: " + captionPath + "<br>"
 
                 elif "insert-attribute" in line:
 
@@ -180,26 +180,26 @@ if __name__ == "__main__":
                     if len(splitResult) > 3:
                         newValue = line.split(',')[3][:-1]
 
-                    actionValue = "Обнаружено добавление нового свойства!"
+                    actionValue = "<br>Обнаружено добавление нового свойства!"
 
-                    changesResult += actionValue + "\n\r    Место изменения: " + captionPath + \
-                                     "\n\r    Свойство: " + name + ", Новое значение:" + newValue + "\n\r"
+                    changesResult += actionValue + "<br> &nbsp &nbsp &nbsp Место изменения:&nbsp " + captionPath + \
+                                     "<br>&nbsp &nbsp &nbsp Свойство: " + name + ",&nbsp Новое значение:" + newValue + "<br>"
 
                 elif "insert" in line and "attribute" not in line:
 
-                    actionValue = "Обнаружено изменение структуры XML!"
+                    actionValue = "<br>Обнаружено изменение структуры XML!"
 
-                    changesResult += actionValue + ", Путь в XML: " + captionPath + ", Добавлен тэг: " \
-                                     + splitResult[2].strip() + "\n\r"
+                    changesResult += actionValue + "<br> &nbsp &nbsp &nbsp Путь в XML:&nbsp " + captionPath + ",&nbsp Добавлен тэг:&nbsp " \
+                                     + splitResult[2].strip() + "<br>"
 
                 elif "rename" in line and "attribute" not in line:
-                    actionValue = "Обнаружено изменение структуры XML!"
-                    changesResult += actionValue + ", Путь в XML: " + \
-                                      captionPath + ", Новое имя тега: [" + splitResult[2].strip() + "\n\r"
+                    actionValue = "<br>Обнаружено изменение структуры XML!"
+                    changesResult += actionValue + "<br>&nbsp &nbsp &nbspПуть в XML:&nbsp " + \
+                                      captionPath + ",&nbsp Новое имя тега:&nbsp [" + splitResult[2].strip() + "<br>"
 
                 elif "delete" in line and "attribute" not in line:
 
-                    actionValue = "Обнаружено изменение структуры XML!"
+                    actionValue = "<br>Обнаружено изменение структуры XML!"
 
                     deleted_tag_path = splitResult[1].strip()
                     deleted_tag_pos = deleted_tag_path.rfind('/')
@@ -208,11 +208,12 @@ if __name__ == "__main__":
                     deleted_tag_pos = deleted_tag_name.find('[')
                     deleted_tag_name = deleted_tag_name[:deleted_tag_pos]
 
-                    changesResult += actionValue + ", Путь в XML: " + captionPath + ", Удаленный тег: " + deleted_tag_name + "\n\r"
+                    changesResult += actionValue + "<br> &nbsp &nbsp &nbsp Путь в XML: " + captionPath + "," \
+                                                                                                         "&nbsp Удаленный тег:&nbsp " + deleted_tag_name + "<br>"
 
                 else:
-                    actionValue = "Обнаружено изменение структуры XML!"
-                    changesResult += actionValue + ", Путь в XML: " + captionPath + "\n\r"
+                    actionValue = "<br>Обнаружено изменение структуры XML!"
+                    changesResult += actionValue + "<br> &nbsp &nbsp &nbsp Путь в XML:&nbsp " + captionPath + "<br>"
 
             print(changesResult)
             print(changesPath)
