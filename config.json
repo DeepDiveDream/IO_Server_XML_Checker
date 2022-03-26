@@ -1,0 +1,8 @@
+{
+	"postgre_user" : "latyn",
+	"postgre_pass" : "nytal",
+    "postgre_host" : "10.3.3.67",
+    "postgre_database" : "elsec",
+    "standart_file_path" : "F:\\!ProgProjects\\Python\\Projects\\IO_Server_XML_Checker\\Hakas_kalina.xml",
+    "input_file_path" : "F:\\!ProgProjects\\Python\\Projects\\IO_Server_XML_Checker\\Hakas_kalina1.xml"
+}

@@ -4,16 +4,18 @@ import sys
 import psycopg2
 from psycopg2 import Error
 import json
+from argparse import ArgumentParser
+
+
 
 
 def connect_to_data_base():
     try:
         # Подключение к существующей базе данных
-        postgre_connection = psycopg2.connect(user="latyn",
-                                              # пароль, который указали при установке PostgreSQL
-                                              password="nytal",
-                                              host="10.3.3.67",
-                                              database="elsec")
+        postgre_connection = psycopg2.connect(user=postgre_user,
+                                              password=postgre_pass,
+                                              host=postgre_host,
+                                              database=postgre_database)
         return postgre_connection
 
     except (Exception, Error) as connection_error:
@@ -98,7 +100,23 @@ def compare_xmlns(observed, expected, xml_format_mode=0):
 
 if __name__ == "__main__":
 
+    parser = ArgumentParser()
+    parser.add_argument('configPath', type=str, help='Path to config file', default='config.json', nargs='?')
+    args = parser.parse_args()
+    config_path = args.configPath
+    print(config_path)
+
+    with open(config_path, 'r') as f:
+        config_data = json.load(f)
+        postgre_user = config_data['postgre_user']
+        postgre_pass = config_data['postgre_pass']
+        postgre_host = config_data['postgre_host']
+        postgre_database = config_data['postgre_database']
+        standart_file_path = config_data['standart_file_path']
+        input_file_path = config_data['input_file_path']
+
     mode = 0
+
     connection = connect_to_data_base()
 
     if not connection:
@@ -110,8 +128,7 @@ if __name__ == "__main__":
         cursor.execute("SELECT * FROM event_source_params('ioServerXML')")
         event_source = cursor.fetchone()[0]
 
-        out = compare_xmlns("Hakas_kalina.xml", "Hakas_kalina1.xml", mode)
-        # out = compare_xmls("ekra.icd", "ekra1.icd", mode)
+        out = compare_xmlns(standart_file_path, input_file_path, mode)
         sql = ""
 
         if out == '':
@@ -135,8 +152,8 @@ if __name__ == "__main__":
             sys.exit(0)
 
         if mode == 0:
-            root_origin = ET.parse('Hakas_kalina.xml')
-            root_new = ET.parse('Hakas_kalina1.xml')
+            root_origin = ET.parse(standart_file_path)
+            root_new = ET.parse(input_file_path)
             changesResult = ""
             changesPath = ""
 
@@ -195,7 +212,7 @@ if __name__ == "__main__":
                 elif "rename" in line and "attribute" not in line:
                     actionValue = "<br>Обнаружено изменение структуры XML!"
                     changesResult += actionValue + "<br>&nbsp &nbsp &nbspПуть в XML:&nbsp " + \
-                                      captionPath + ",&nbsp Новое имя тега:&nbsp [" + splitResult[2].strip() + "<br>"
+                                     captionPath + ",&nbsp Новое имя тега:&nbsp [" + splitResult[2].strip() + "<br>"
 
                 elif "delete" in line and "attribute" not in line:
 
