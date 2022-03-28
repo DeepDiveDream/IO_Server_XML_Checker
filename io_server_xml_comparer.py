@@ -104,7 +104,7 @@ if __name__ == "__main__":
     parser.add_argument('configPath', type=str, help='Path to config file', default='config.json', nargs='?')
     args = parser.parse_args()
     config_path = args.configPath
-    print(config_path)
+    # print(config_path)
 
     with open(config_path, 'r') as f:
         config_data = json.load(f)
@@ -144,7 +144,7 @@ if __name__ == "__main__":
 
             data = json.dumps(json_data)
 
-            cursor.callproc('event_new', [event_type, event_source, 'false', data])
+            cursor.callproc('event_new', [event_type, event_source, False, data])
 
             connection.commit()
             cursor.close()
@@ -243,7 +243,7 @@ if __name__ == "__main__":
             }
 
             data = json.dumps(json_data)
-            cursor.callproc('event_new', [event_type, event_source, 'true', data])
+            cursor.callproc('event_new', [event_type, event_source, True, data])
 
             connection.commit()
         else:
@@ -269,7 +269,7 @@ if __name__ == "__main__":
         event_source = cursorException.fetchone()[0]
 
         data = json.dumps({'data': errorStr})
-        cursorException.callproc('event_new', [event_type, event_source, 'false', data])
+        cursorException.callproc('event_new', [event_type, event_source, False, data])
 
         conn.commit()
         cursorException.close()
