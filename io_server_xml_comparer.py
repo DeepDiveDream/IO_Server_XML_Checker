@@ -133,8 +133,6 @@ if __name__ == "__main__":
         event_source = params[0]
         param_dict = params[4]
 
-        print(param_dict)
-
         ip_address = param_dict["ip"]
         login = param_dict["login"]
         input_file_path = param_dict["input_file_path"]
