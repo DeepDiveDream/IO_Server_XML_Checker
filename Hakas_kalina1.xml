@@ -568,7 +568,7 @@
           <pass number="7133" caption="Разрешение ТУ 15" tagid="900005119" tagtype="1" links="s355"/>
           <pass number="7134" caption="Разрешение ТУ 16" tagid="900005120" tagtype="1" links="s356"/>
           <pass number="7135" caption="Разрешение ТУ 17" tagid="900005121" tagtype="1" links="s357"/>
-          <pass number="7136" caption="Разрешение ТУ 18" tagid="9000051252" tagtype="1" links="s358"/>
+          <pass number="7136" caption="Разрешение ТУ 18" tagid="900005122" tagtype="1" links="s358"/>
           <pass number="7137" caption="Разрешение ТУ 19" tagid="900005123" tagtype="1" links="s359"/>
           <pass number="7138" caption="Разрешение ТУ 20" tagid="900005124" tagtype="1" links="s360"/>
         </f_pass>
@@ -14613,7 +14613,7 @@
           <source number="6853" caption="ПС Тея В 1Т-6 вкл. (ТМ)" no="1301"/>
           <source number="6854" caption="ПС Тея В 2Т-6 вкл. (ТМ)" no="1302"/>
           <source number="6855" caption="ПС Тея СВ-6 вкл. (ТМ)" no="1303"/>
-          <source number="68565" caption="ПС Тея В ф.14-05 вкл. (ТМ)" no="1304"/>
+          <source number="6856" caption="ПС Тея В ф.14-05 вкл. (ТМ)" no="1304"/>
           <source number="6857" caption="ПС Тея В ф.14-06 вкл. (ТМ)" no="1305"/>
           <source number="6858" caption="ПС Тея В ф.14-07 вкл. (ТМ)" no="1306"/>
           <source number="6859" caption="ПС Тея В ф.14-08 вкл. (ТМ)" no="1307"/>
@@ -14652,7 +14652,7 @@
         </f_source>
         <f_source number="218" caption="ТС">
           <source number="11944" caption="В 1Т 35 кВ положение выключателя" no="1001"/>
-          <source number="119455" caption="В 1Т 35 кВ ДУ разрешено" no="1002"/>
+          <source number="11945" caption="В 1Т 35 кВ ДУ разрешено" no="1002"/>
           <source number="11946" caption="В 1Т 35 кВ Пуск РЗА" no="1005"/>
           <source number="11947" caption="В 1Т 35 кВ неиспр. модуля управления" no="1006"/>
           <source number="11948" caption="В 1Т 35 кВ неиспр. элементов ШУ" no="1007"/>

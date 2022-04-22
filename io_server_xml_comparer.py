@@ -112,8 +112,8 @@ if __name__ == "__main__":
         postgre_pass = config_data['postgre_pass']
         postgre_host = config_data['postgre_host']
         postgre_database = config_data['postgre_database']
-        standart_file_path = config_data['standart_file_path']
-        input_file_path = config_data['input_file_path']
+        local_original_file_path = config_data['standart_file_path']
+        local_input_file_path = config_data['input_file_path']
 
     mode = 0
 
@@ -126,9 +126,21 @@ if __name__ == "__main__":
     try:
 
         cursor.execute("SELECT * FROM event_source_params('ioServerXML')")
-        event_source = cursor.fetchone()[0]
+        params = cursor.fetchone()
 
-        out = compare_xmlns(standart_file_path, input_file_path, mode)
+        print(params)
+
+        event_source = params[0]
+        param_dict = params[4]
+
+        print(param_dict)
+
+        ip_address = param_dict["ip"]
+        login = param_dict["login"]
+        input_file_path = param_dict["input_file_path"]
+        original_file_path = param_dict["original_file_path"]
+
+        out = compare_xmlns(original_file_path, input_file_path, mode)
         sql = ""
 
         if out == '':
