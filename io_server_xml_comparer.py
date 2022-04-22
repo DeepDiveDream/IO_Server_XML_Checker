@@ -104,7 +104,6 @@ if __name__ == "__main__":
     parser.add_argument('configPath', type=str, help='Path to config file', default='config.json', nargs='?')
     args = parser.parse_args()
     config_path = args.configPath
-    # print(config_path)
 
     with open(config_path, 'r') as f:
         config_data = json.load(f)
@@ -162,7 +161,7 @@ if __name__ == "__main__":
             sys.exit(0)
 
         if mode == 0:
-            root_origin = ET.parse(standart_file_path)
+            root_origin = ET.parse(original_file_path)
             root_new = ET.parse(input_file_path)
             changesResult = ""
             changesPath = ""
