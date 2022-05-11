@@ -127,7 +127,7 @@ if __name__ == "__main__":
         cursor.execute("SELECT * FROM event_source_params('ioServerXML')")
         params = cursor.fetchone()
 
-        print(params)
+        # print(params)
 
         event_source = params[0]
         param_dict = params[4]
@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
             connection.commit()
             cursor.close()
-            print("No changes")
+            # print("No changes")
             sys.exit(0)
 
         if mode == 0:
@@ -241,8 +241,8 @@ if __name__ == "__main__":
                     actionValue = "<br>Обнаружено изменение структуры XML!"
                     changesResult += actionValue + "<br> &nbsp &nbsp &nbsp Путь в XML:&nbsp " + captionPath + "<br>"
 
-            print(changesResult)
-            print(changesPath)
+            # print(changesResult)
+            # print(changesPath)
 
             json_data = {
                 "data": [changesPath],
@@ -282,7 +282,7 @@ if __name__ == "__main__":
 
         conn.commit()
         cursorException.close()
-        print(error)
+        # print(error)
         sys.exit(1)
     finally:
         if connection:
