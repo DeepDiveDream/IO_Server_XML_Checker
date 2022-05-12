@@ -111,23 +111,14 @@ if __name__ == "__main__":
     with open(config_path, 'r') as f:
         config_data = json.load(f)
         ini_file_path = config_data['ini_file_path']
-        # postgre_user = config_data['postgre_user']
-        # postgre_pass = config_data['postgre_pass']
-        # postgre_host = config_data['postgre_host']
-        # postgre_database = config_data['postgre_database']
-        # local_original_file_path = config_data['standart_file_path']
-        # local_input_file_path = config_data['input_file_path']
 
-    # instantiate
-    config = ConfigParser()
+    config_ini = ConfigParser()
+    config_ini.read(ini_file_path)
 
-    # parse existing file
-    config.read(ini_file_path)
-
-    postgre_user = config.get('io_server_xml_comparer', 'postgre_user')
-    postgre_pass = config.get('io_server_xml_comparer', 'postgre_pass')
-    postgre_host = config.get('io_server_xml_comparer', 'postgre_host')
-    postgre_database = config.get('io_server_xml_comparer', 'postgre_database')
+    postgre_user = config_ini.get('io_server_xml_comparer', 'postgre_user')
+    postgre_pass = config_ini.get('io_server_xml_comparer', 'postgre_pass')
+    postgre_host = config_ini.get('io_server_xml_comparer', 'postgre_host')
+    postgre_database = config_ini.get('io_server_xml_comparer', 'postgre_database')
 
 
     connection = connect_to_data_base()
