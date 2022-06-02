@@ -5,7 +5,7 @@ import psycopg2
 from psycopg2 import Error
 import json
 from argparse import ArgumentParser
-from configparser import ConfigParser
+import configparser
 
 
 
@@ -112,7 +112,7 @@ if __name__ == "__main__":
         config_data = json.load(f)
         ini_file_path = config_data['ini_file_path']
 
-    config_ini = ConfigParser()
+    config_ini = configparser.ConfigParser()
     config_ini.read(ini_file_path)
 
     postgre_user = config_ini.get('io_server_xml_comparer', 'postgre_user')
