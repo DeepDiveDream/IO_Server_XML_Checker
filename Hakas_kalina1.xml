@@ -14673,7 +14673,7 @@
       <f_source number="219" caption="Принимаемые значения">
         <f_source number="220" caption="ТИ">
           <source number="11971" caption="Ia В 2Т 35кВ" no="3001"/>
-          <source number="11972" caption="Ib В 2Т 35кВ" no="3002"/>
+          <source number="11972" caption="Ib В 2Т 35кВ" no="30012"/>
           <source number="11973" caption="Ic В 2Т 35кВ" no="3003"/>
           <source number="11974" caption="Ua В 2Т 35кВ" no="3010"/>
           <source number="11975" caption="Ub В 2Т 35кВ" no="3011"/>
