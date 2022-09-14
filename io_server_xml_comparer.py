@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from xmldiff import main, formatting
 import xml.etree.ElementTree as ET
 import sys
@@ -6,21 +7,33 @@ from psycopg2 import Error
 import json
 from argparse import ArgumentParser
 import configparser
+from datetime import datetime
+from pathlib import Path
 
 
+def fields(cursor):
+    results = {}
+    column = 0
+
+    for d in cursor.description:
+        results[d[0]] = column
+        column += 1
+
+    return results
 
 
-def connect_to_data_base():
+def connect_to_postgre(dbase, login, password, host, port):
     try:
-        # Подключение к существующей базе данных
-        postgre_connection = psycopg2.connect(user=postgre_user,
-                                              password=postgre_pass,
-                                              host=postgre_host,
-                                              database=postgre_database)
-        return postgre_connection
-
-    except (Exception, Error) as connection_error:
-        print("Ошибка при работе с PostgreSQL", connection_error)
+        conn = psycopg2.connect(
+            database=dbase,
+            user=login,
+            password=password,
+            port=port,
+            host=host)
+        print(f"{currentScript} {datetime.now()} Соединение с БД {dbase}, сервер {host} успешно!")
+        return conn
+    except (Exception, Error) as connect_error:
+        print(f"{currentScript} {datetime.now()} Ошибка соеденения с БД {dbase} сервер {host}: {connect_error}")
 
 
 def get_name_of_deleted_tag(input_string):
@@ -103,6 +116,8 @@ if __name__ == "__main__":
 
     mode = 0
 
+    currentScript = '[IO_Server_XML_Comparer]'
+
     parser = ArgumentParser()
     parser.add_argument('configPath', type=str, help='Path to config file', default='config.json', nargs='?')
     args = parser.parse_args()
@@ -115,64 +130,89 @@ if __name__ == "__main__":
     config_ini = configparser.ConfigParser()
     config_ini.read(ini_file_path)
 
-    postgre_user = config_ini.get('io_server_xml_comparer', 'postgre_user')
-    postgre_pass = config_ini.get('io_server_xml_comparer', 'postgre_pass')
-    postgre_host = config_ini.get('io_server_xml_comparer', 'postgre_host')
-    postgre_database = config_ini.get('io_server_xml_comparer', 'postgre_database')
+    postgre_user = config_ini.get('common', 'pguser')
+    postgre_pass = config_ini.get('common', 'pgpassword')
+    postgre_host = config_ini.get('common', 'pghost')
+    postgre_port = config_ini.get('common', 'pgport')
+    postgre_database = config_ini.get('common', 'pgdb')
 
+    xml_dir = config_ini.get('io_server_xml_comparer', 'xml_dir')
 
-    connection = connect_to_data_base()
+    connection = connect_to_postgre(postgre_database, postgre_user, postgre_pass, postgre_host, postgre_port)
 
     if not connection:
         sys.exit(1)
 
-    cursor = connection.cursor()
+    # print('Connected')
+
+    postgre_cursor = connection.cursor()
     try:
 
-        cursor.execute("SELECT * FROM event_source_params('ioServerXML')")
-        params = cursor.fetchone()
+        postgre_cursor.execute("SELECT * FROM event_source_params('ioServerXML')")
 
-        # print(params)
+        fields_map_params = fields(postgre_cursor)
+        params = postgre_cursor.fetchone()
 
-        event_source = params[0]
-        param_dict = params[4]
+        if params is None:
+            print(f'{currentScript} {datetime.now()} Не заполнены параметры для источника ioServerXML')
+            sys.exit(2)
 
-        ip_address = param_dict["ip"]
-        login = param_dict["login"]
-        input_file_path = param_dict["input_file_path"]
-        original_file_path = param_dict["original_file_path"]
+        event_source = params[fields_map_params['id']]
+        param_dict = params[fields_map_params['params']]
 
-        out = compare_xmlns(original_file_path, input_file_path, mode)
+        if len(param_dict) == 0:
+            print(f'{currentScript} {datetime.now()} Не заполнены параметры для источника ioServerXML')
+            sys.exit(2)
+
+        original_file = xml_dir + param_dict["original_file"]
+
+        path = Path(original_file)
+        if not path.is_file():
+            print(f'{currentScript} {datetime.now()} Эталонный XML файл {original_file} сервера ввода-вывода не найден!')
+            sys.exit(2)
+
+        input_file = xml_dir + param_dict["input_file"]
+
+        path = Path(input_file)
+        if not path.is_file():
+            print(f'{currentScript} {datetime.now()} Проверяемый XML файл {input_file} сервера ввода-вывода не найден!')
+            sys.exit(2)
+
+        out = compare_xmlns(original_file, input_file, mode)
+        # out = compare_xmlns(original_file_path, input_file_path, mode)
         sql = ""
 
         if out == '':
-            cursor.execute("SELECT id From event_type where name = \'configNotChanged.ioServerXML\' ")
-            event_type = cursor.fetchone()[0]
 
-            json_data = {
-                "data": 'Изменения не найдены',
-                "display": {
-                    "Изменения": ''
-                }
-            }
-
-            data = json.dumps(json_data)
-
-            cursor.callproc('event_new', [event_type, event_source, False, data])
-
-            connection.commit()
-            cursor.close()
-            # print("No changes")
             sys.exit(0)
 
+            # postgre_cursor.execute("SELECT id From event_type where name = \'configNotChanged.ioServerXML\' ")
+            # event_type = postgre_cursor.fetchone()[0]
+            #
+            # json_data = {
+            #     "data": 'Изменения не найдены',
+            #     "display": {
+            #         "Изменения": ''
+            #     }
+            # }
+            #
+            # data = json.dumps(json_data)
+            #
+            # postgre_cursor.callproc('event_new', [event_type, event_source, False, data])
+            #
+            # connection.commit()
+            # postgre_cursor.close()
+            # # print("No changes")
+            # sys.exit(0)
+
         if mode == 0:
-            root_origin = ET.parse(original_file_path)
-            root_new = ET.parse(input_file_path)
+            root_origin = ET.parse(original_file)
+            root_new = ET.parse(input_file)
             changesResult = ""
             changesPath = ""
 
-            cursor.execute("SELECT id From event_type where name = \'configChanged.ioServerXML\' ")
-            event_type = cursor.fetchone()[0]
+            postgre_cursor.execute("SELECT id From event_type where name = \'configChanged.ioServerXML\' ")
+            event_type = postgre_cursor.fetchone()[0]
 
             for line in out.splitlines():
                 path = get_path_to_original_attr(line)
@@ -257,7 +297,7 @@ if __name__ == "__main__":
             }
 
             data = json.dumps(json_data)
-            cursor.callproc('event_new', [event_type, event_source, True, data])
+            postgre_cursor.callproc('event_new', [event_type, event_source, True, data])
 
             connection.commit()
         else:
@@ -268,8 +308,13 @@ if __name__ == "__main__":
                     print(i)
 
     except (Exception, Error) as error:
-        conn = connect_to_data_base()
-        cursorException = conn.cursor()
+
+        conn_err = connect_to_postgre(postgre_database, postgre_user, postgre_pass, postgre_host, postgre_port)
+
+        if not conn_err:
+            sys.exit(1)
+
+        cursorException = conn_err.cursor()
         errorStr = error.args[0]
         start = errorStr.find('\n')
         errorStr = errorStr[:start]
@@ -285,11 +330,11 @@ if __name__ == "__main__":
         data = json.dumps({'data': errorStr})
         cursorException.callproc('event_new', [event_type, event_source, False, data])
 
-        conn.commit()
+        conn_err.commit()
         cursorException.close()
         # print(error)
         sys.exit(1)
     finally:
         if connection:
-            cursor.close()
+            postgre_cursor.close()
             connection.close()
