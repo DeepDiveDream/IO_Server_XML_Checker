@@ -9,6 +9,8 @@ from argparse import ArgumentParser
 import configparser
 from datetime import datetime, timedelta
 from pathlib import Path
+import os
+import shutil
 
 
 def fields(cursor):
@@ -22,7 +24,7 @@ def fields(cursor):
     return results
 
 
-def connect_to_postgre(dbase, login, password, host, port):
+def connect_to_postgre(dbase, login, password, host, port, event_source):
     try:
         conn = psycopg2.connect(
             database=dbase,
@@ -31,18 +33,22 @@ def connect_to_postgre(dbase, login, password, host, port):
             port=port,
             host=host)
 
-        # msg = f"{datetime.now()} | {currentScript} | source: {event_source_main} |" \
-        #     f" Соединение с БД {dbase}, сервер {host} успешно!"
-        # print(msg)
-        # write_log(log_file_name, msg)
+        if event_source != event_source_main:
+            msg = f"{datetime.now()} | {currentScript} | source: {event_source} |" \
+                f" Соединение с БД {dbase}, сервер {host} успешно!"
+            write_connection_log(event_source, currentScript, host, dbase, True, msg)
 
         return conn
 
     except (Exception, Error) as connect_error:
-        local_error = f'{datetime.now()} | {currentScript} | source: {event_source_main} | ' \
-            f'Ошибка соединения с БД {dbase}, сервер {host}: {connect_error}'
-        print(local_error)
+        local_error = f'{datetime.now()} | {currentScript} | source: {event_source} | ' \
+            f'Ошибка соединения с БД {dbase}, сервер {host}:{port}, {connect_error}'
+        if console_messages:
+            print(local_error)
         write_log(log_file_name, local_error)
+        if event_source != event_source_main:
+            write_connection_log(event_source, currentScript, host, dbase, False, local_error)
+        return None
 
 
 def write_connection_log(source_id, script_name, host, db_name, result, message):
@@ -143,15 +149,57 @@ def compare_xmlns(observed, expected, xml_format_mode=0):
     return diff
 
 
-def check_event_source(event_source, param_dict):
-    original_file = xml_dir_etalon + param_dict["original_file"]
+def write_event(last_event, field_map_event, event_source, changes_result):
 
+    if last_event is None:
+        json_data = {
+            "data": [changes_result],
+            f"display": {
+                "Изменения": changes_result
+            },
+            "event_description": "Обнаружено изменение XML сервера ввода-вывода!",
+            "event_date": f'{datetime.now()}',
+            "event_code": event_type,
+            "etalon_updated": False
+        }
+        data = json.dumps(json_data)
+        postgre_cursor.callproc('event_new', [event_type, event_source, True, data])
+        postgre_conn.commit()
+    else:
+        id_last = last_event[field_map_event['id']]
+        last_data = last_event[field_map_event['data']]
+
+        json_data = {
+            "data": [changes_result],
+            f"display": {
+                "Изменения": changes_result
+            },
+            "event_description": last_data['event_description'],
+            "event_date": last_data['event_date'],
+            "event_code": event_type,
+            "etalon_updated": False
+        }
+
+        query = f'delete from event where id = {id_last}'
+        postgre_cursor.execute(query)
+        postgre_conn.commit()
+
+        data = json.dumps(json_data)
+        query = f"insert into event (type , source, data, created, enduser) \
+                  values ({event_type}, {event_source}, '{data}', '{datetime.now()}', True )"
+        postgre_cursor.execute(query)
+        postgre_conn.commit()
+
+
+def check_event_source(event_source, param_dict):
+
+    original_file = xml_dir_etalon + param_dict["original_file"]
     path = Path(original_file)
     if not path.is_file():
         msg = f'{currentScript} {datetime.now()} Эталонный XML файл {original_file} сервера ввода-вывода не найден!'
-        print(msg)
+        if console_messages:
+            print(msg)
         write_log(log_file_name, msg)
-        write_connection_log(event_source, currentScript, postgre_host, postgre_database, False, msg)
         return
 
     input_file = xml_dir_input + param_dict["input_file"]
@@ -159,121 +207,163 @@ def check_event_source(event_source, param_dict):
     path = Path(input_file)
     if not path.is_file():
         msg = f'{currentScript} {datetime.now()} Проверяемый XML файл {input_file} сервера ввода-вывода не найден!'
-        print(msg)
+        if console_messages:
+            print(msg)
         write_log(log_file_name, msg)
-        write_connection_log(event_source, currentScript, postgre_host, postgre_database, False, msg)
         return
 
-    out = compare_xmlns(original_file, input_file, mode)
+    query = f"SELECT *  FROM event where type = {event_type} and source = {event_source} " \
+        f"order by id desc limit 1"
+    postgre_cursor.execute(query)
+    field_map_event = fields(postgre_cursor)
+    last_event = postgre_cursor.fetchone()
+
+    if last_event is not None:
+        is_valid = last_event[field_map_event['legitimated']]
+
+        # если событие несоответствия эталону есть НО помечено пользователем как валидное
+        if is_valid is not None:
+
+            last_data = last_event[field_map_event['data']]
+            etalon_updated = False
+            if "etalon_updated" in last_data:
+                etalon_updated = last_data["etalon_updated"]
+
+            # если файл эталона не обновлен
+            if not etalon_updated:
+                # обновляем эталон и помечаем в событии, что файл обновлен
+                shutil.copyfile(input_file, original_file)
+
+                msg = f'{currentScript} {datetime.now()} Эталон XML файла сервера ввода-вывода обновлён!'
+                if console_messages:
+                    print(msg)
+                write_log(log_file_name, msg)
+
+                json_data = {
+                    "data": last_data['data'],
+                    "display": last_data['display'],
+                    "event_description": last_data['event_description'],
+                    "event_date": last_data['event_date'],
+                    "event_code": event_type,
+                    "etalon_updated": True
+                }
+                data = json.dumps(json_data)
+                query = f"update event set data = '{data}' where id = {last_event[field_map_event['id']]} "
+                postgre_cursor.execute(query)
+                postgre_conn.commit()
+                return
+
+            # сбрасываем текущее событие, что бы создавать новые
+            last_event = None
+
+    original_size = os.path.getsize(original_file)
+    input_size = os.path.getsize(input_file)
+
+    size_diff = abs(original_size-input_size)
+
+    if size_diff > 1024:
+        changes_result = "<br>Обнаружено значительное несоответствие XML файлов!" + \
+                          "<br> &nbsp &nbsp &nbsp Размер проверяемого XML файла сервера ввода-вывода " + \
+                          f"отличается от эталона на {size_diff} символов!" + \
+                          f"<br> &nbsp &nbsp &nbsp({round(size_diff/1024,1)}Кбайт)"
+
+        write_event(last_event, field_map_event, event_source, changes_result)
+        return
+
+    out = compare_xmlns(original_file, input_file)
 
     if out == '':
         msg = f'{currentScript} {datetime.now()} Изменения в XML файле {input_file} сервера ввода-вывода не найдены!'
-        # print(msg)
-        # write_log(log_file_name, msg)
-        write_connection_log(event_source, currentScript, postgre_host, postgre_database, True, msg)
+        if console_messages:
+            print(msg)
+        write_log(log_file_name, msg)
         return
 
-    if mode == 0:
-        root_origin = ET.parse(original_file)
-        root_new = ET.parse(input_file)
-        changes_result = ""
-        changes_path = ""
-        for line in out.splitlines():
-            path = get_path_to_original_attr(line)
-            caption_path = get_caption_path_to_attr(path, True, root_origin, root_new)
-            split_result = line.split(',')
-            action_value = split_result[0][1:]
+    root_origin = ET.parse(original_file)
+    root_new = ET.parse(input_file)
+    changes_result = ""
+    changes_path = ""
+    for line in out.splitlines():
+        path = get_path_to_original_attr(line)
+        caption_path = get_caption_path_to_attr(path, True, root_origin, root_new)
+        split_result = line.split(',')
+        action_value = split_result[0][1:]
 
-            changes_path += line + "\n"
+        changes_path += line + "\n"
 
-            if "update-attribute" in line or "delete-attribute" in line:
+        if "update-attribute" in line or "delete-attribute" in line:
 
-                elm = root_origin.findall(path)
+            elm = root_origin.findall(path)
 
-                name = get_name_of_original_attr(line)
-                new_value = ""
-                if len(split_result) > 3:
-                    new_value = line.split(',')[3][:-1]
+            name = get_name_of_original_attr(line)
+            new_value = ""
+            if len(split_result) > 3:
+                new_value = line.split(',')[3][:-1]
 
-                if action_value == "update-attribute":
-                    action_value = "<br>Обнаружено изменение значения свойства!"
-                else:
-                    action_value = "<br>Обнаружено удаление свойства!"
-
-                if name in elm[0].attrib:
-                    changes_result += action_value + "<br> &nbsp &nbsp &nbsp Место изменения: &nbsp " + caption_path + \
-                                      "<br> &nbsp &nbsp &nbsp Свойство: &nbsp " + name + ', ' \
-                                      '&nbsp Новое значение: &nbsp' + new_value + \
-                                      ',&nbsp Старое значение: "' + elm[0].attrib[name] + '"<br>'
-                else:
-                    changes_result += action_value + "<br>&nbsp &nbsp &nbsp Место изменения: " + caption_path + "<br>"
-
-            elif "insert-attribute" in line:
-
-                caption_path = get_caption_path_to_attr(path, False, root_origin, root_new)
-                name = get_name_of_original_attr(line)
-                new_value = ""
-                if len(split_result) > 3:
-                    new_value = line.split(',')[3][:-1]
-
-                action_value = "<br>Обнаружено добавление нового свойства!"
-
-                changes_result += action_value + \
-                                  "<br> &nbsp &nbsp &nbsp Место изменения:&nbsp " + caption_path + \
-                                  "<br>&nbsp &nbsp &nbsp Свойство: " + name + ",&nbsp Новое значение:" \
-                                  + new_value + "<br>"
-
-            elif "insert" in line and "attribute" not in line:
-
-                action_value = "<br>Обнаружено изменение структуры XML!"
-
-                changes_result += action_value + "<br> &nbsp &nbsp &nbsp Путь в XML:&nbsp " + caption_path + \
-                                                 ",&nbsp Добавлен тэг:&nbsp " \
-                                               + split_result[2].strip() + "<br>"
-
-            elif "rename" in line and "attribute" not in line:
-                action_value = "<br>Обнаружено изменение структуры XML!"
-                changes_result += action_value + "<br>&nbsp &nbsp &nbspПуть в XML:&nbsp " + \
-                                  caption_path + ",&nbsp Новое имя тега:&nbsp [" + split_result[2].strip() + "<br>"
-
-            elif "delete" in line and "attribute" not in line:
-
-                action_value = "<br>Обнаружено изменение структуры XML!"
-
-                deleted_tag_path = split_result[1].strip()
-                deleted_tag_pos = deleted_tag_path.rfind('/')
-                deleted_tag_name = deleted_tag_path[deleted_tag_pos + 1:]
-
-                deleted_tag_pos = deleted_tag_name.find('[')
-                deleted_tag_name = deleted_tag_name[:deleted_tag_pos]
-
-                changes_result += action_value + "<br> &nbsp &nbsp &nbsp Путь в XML: " + caption_path + "," \
-                                                 "&nbsp Удаленный тег:&nbsp " + deleted_tag_name + "<br>"
-
+            if action_value == "update-attribute":
+                action_value = "<br>Обнаружено изменение значения свойства!"
             else:
-                action_value = "<br>Обнаружено изменение структуры XML!"
-                changes_result += action_value + "<br> &nbsp &nbsp &nbsp Путь в XML:&nbsp " + caption_path + "<br>"
+                action_value = "<br>Обнаружено удаление свойства!"
 
-        # print(changes_result)
-        # print(changes_path)
+            if name in elm[0].attrib:
+                changes_result += action_value + "<br> &nbsp &nbsp &nbsp Место изменения: &nbsp " + caption_path + \
+                                  "<br> &nbsp &nbsp &nbsp Свойство: &nbsp " + name + ', ' \
+                                                                                     '&nbsp Новое значение: &nbsp' + new_value + \
+                                  ',&nbsp Старое значение: "' + elm[0].attrib[name] + '"<br>'
+            else:
+                changes_result += action_value + "<br>&nbsp &nbsp &nbsp Место изменения: " + caption_path + "<br>"
 
-        json_data = {
-            "data": [changes_result],
-            "display": {
-                "Изменения": changes_result
-            }
-        }
+        elif "insert-attribute" in line:
 
-        data = json.dumps(json_data)
-        postgre_cursor.callproc('event_new', [event_type, event_source, True, data])
+            caption_path = get_caption_path_to_attr(path, False, root_origin, root_new)
+            name = get_name_of_original_attr(line)
+            new_value = ""
+            if len(split_result) > 3:
+                new_value = line.split(',')[3][:-1]
 
-        postgre_conn.commit()
-    else:
-        import re
+            action_value = "<br>Обнаружено добавление нового свойства!"
 
-        for i in out.splitlines():
-            if re.search(r'\bdiff:\w+', i):
-                print(i)
+            changes_result += action_value + \
+                              "<br> &nbsp &nbsp &nbsp Место изменения:&nbsp " + caption_path + \
+                              "<br>&nbsp &nbsp &nbsp Свойство: " + name + ",&nbsp Новое значение:" \
+                              + new_value + "<br>"
+
+        elif "insert" in line and "attribute" not in line:
+
+            action_value = "<br>Обнаружено изменение структуры XML!"
+
+            changes_result += action_value + "<br> &nbsp &nbsp &nbsp Путь в XML:&nbsp " + caption_path + \
+                              ",&nbsp Добавлен тэг:&nbsp " \
+                              + split_result[2].strip() + "<br>"
+
+        elif "rename" in line and "attribute" not in line:
+            action_value = "<br>Обнаружено изменение структуры XML!"
+            changes_result += action_value + "<br>&nbsp &nbsp &nbspПуть в XML:&nbsp " + \
+                              caption_path + ",&nbsp Новое имя тега:&nbsp [" + split_result[2].strip() + "<br>"
+
+        elif "delete" in line and "attribute" not in line:
+
+            action_value = "<br>Обнаружено изменение структуры XML!"
+
+            deleted_tag_path = split_result[1].strip()
+            deleted_tag_pos = deleted_tag_path.rfind('/')
+            deleted_tag_name = deleted_tag_path[deleted_tag_pos + 1:]
+
+            deleted_tag_pos = deleted_tag_name.find('[')
+            deleted_tag_name = deleted_tag_name[:deleted_tag_pos]
+
+            changes_result += action_value + "<br> &nbsp &nbsp &nbsp Путь в XML: " + caption_path + "," \
+                                                                                                    "&nbsp Удаленный тег:&nbsp " + deleted_tag_name + "<br>"
+
+        else:
+            action_value = "<br>Обнаружено изменение структуры XML!"
+            changes_result += action_value + "<br> &nbsp &nbsp &nbsp Путь в XML:&nbsp " + caption_path + "<br>"
+
+    if console_messages:
+        print(changes_result)
+        print(changes_path)
+
+    write_event(last_event,field_map_event,event_source,changes_result)
 
 
 def check_all_event_sources():
@@ -286,25 +376,23 @@ def check_all_event_sources():
             if len(param_dict) == 0:
                 local_error = f'{datetime.now()} | {currentScript} | source: {event_source} ' \
                     f'| Не заполнены параметры для источника "{event_source_name}"'
-                print(local_error)
+                if console_messages:
+                    print(local_error)
                 write_log(log_file_name, local_error)
-                write_connection_log(event_source, currentScript,
-                                     postgre_host, postgre_database, False, local_error)
                 continue
 
             check_event_source(event_source, param_dict)
 
         except (Exception, Error) as error1:
             local_error = f'{datetime.now()} | {currentScript} | source: {event_source} | Ошибка: {error1}'
-            print(local_error)
+            if console_messages:
+                print(local_error)
             write_log(log_file_name, local_error)
-            write_connection_log(event_source, currentScript, postgre_host, postgre_database, False, local_error)
             continue
 
 
 if __name__ == "__main__":
 
-    mode = 0
     currentScript = '[IO_Server_XML_Comparer]'
     event_type_name = 'configChanged.ioServerXML'
     event_source_name = "ioServerXML"
@@ -314,6 +402,7 @@ if __name__ == "__main__":
     postgre_conn = None
     postgre_host = None
     postgre_database = None
+    console_messages = False
 
     oldest_log_delta = 30
 
@@ -344,18 +433,16 @@ if __name__ == "__main__":
         if log_dir != "":
             log_file_name = log_dir + "/" + log_file_name
 
-        postgre_conn = connect_to_postgre(postgre_database, postgre_user, postgre_pass, postgre_host, postgre_port)
+        postgre_conn = connect_to_postgre(postgre_database, postgre_user, postgre_pass,
+                                          postgre_host, postgre_port, event_source_main)
 
         if not postgre_conn:
             sys.exit(1)
-
-        # print('Connected')
 
         postgre_cursor = postgre_conn.cursor()
 
         result_msg = f"{datetime.now()} | {currentScript} | source: {event_source_main} |" \
             f" Соединение с БД {postgre_database}, сервер {postgre_host} успешно!"
-
         write_connection_log(event_source_main, currentScript, postgre_host, postgre_database, True, result_msg)
 
         postgre_cursor.execute(f"SELECT * FROM event_type where name = \'{event_type_name}\'")
@@ -369,9 +456,9 @@ if __name__ == "__main__":
             str_error = f'{datetime.now()} | {currentScript} | source: {event_source_main} ' \
                 f'| Не найдет источник событий "{event_source_name}", ' \
                 f'БД "{postgre_database}", сервер "{postgre_host}"'
-            print(str_error)
+            if console_messages:
+                print(str_error)
             write_log(log_file_name, str_error)
-            write_connection_log(event_source_main, currentScript, postgre_host, postgre_database, False, str_error)
             sys.exit(1)
 
         delete_old_connection_log()
@@ -380,11 +467,10 @@ if __name__ == "__main__":
 
     except(Exception, Error) as main_error:
         str_error = f"{datetime.now()} | {currentScript} | source: {event_source_main} | Ошибка: {main_error}"
-        print(str_error)
+        if console_messages:
+            print(str_error)
         if log_file_name:
             write_log(log_file_name, str_error)
-        if postgre_conn and postgre_cursor and postgre_host and postgre_database:
-            write_connection_log(event_source_main, currentScript, postgre_host, postgre_database, False, str_error)
     finally:
         if postgre_cursor:
             postgre_cursor.close()
